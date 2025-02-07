@@ -1,25 +1,48 @@
+import secrets
 from database import db
 from models.UserModel import User
 from schemas.UserSchema import UserCreate
 from sqlalchemy.future import select
+from utils.email import send_reset_email
 
 
-async def create(request_body: UserCreate):
-    try:
-        new_user = User(
-            email=request_body.email, 
-            name=request_body.name,
-            password=request_body.password,
-            is_active=True
-        )
-        db.add(new_user)
-        await db.commit()
-        db.refresh(new_user)
-        return new_user
-    except Exception as e:
-        await db.rollback()  # Reverte qualquer alteração pendente no banco de dados
-        print(f"Ocorreu um erro: {e}")  # Log do erro para depuração
-        raise  # Relança a exceção para que o erro seja tratado adequadamente no nível superior
+
+
+async def request_password_reset(email: str):
+    query = select(User).where(User.email == email)
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
+
+    if not user:
+        return {"message": "User not found"}
+
+    # Gerar token seguro
+    reset_token = secrets.token_urlsafe(32)
+    user.reset_token = reset_token
+    await db.commit()
+
+    # Aqui você deve enviar um e-mail ao usuário com um link contendo o token
+    #print(f"Recuperação de senha: use este token {reset_token}")
+
+     # Enviar email
+    await send_reset_email(user.email, reset_token)
+
+    return {"message": "Password reset link sent to your email"}
+
+
+async def reset_password(token: str, new_password: str):
+    query = select(User).where(User.reset_token == token)
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
+
+    if not user:
+        return {"message": "Invalid or expired token"}
+
+    user.password = new_password  # Em produção, você deve hashear a senha
+    user.reset_token = None  # Apagar o token após a redefinição
+    await db.commit()
+
+    return {"message": "Password reset successfully"}
 
 
 # R READ

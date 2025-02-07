@@ -1,5 +1,4 @@
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
 from fastapi import FastAPI
 from routers import user_router
 from database import db

@@ -1,11 +1,23 @@
 from fastapi import APIRouter, HTTPException
 from repositories import UserRepository
 from schemas.UserSchema import UserCreate, UserResponse
+from utils.email import send_reset_email
+
 
 router = APIRouter(
     prefix="/users",
     tags=["Users"],
 )
+
+
+@router.post("/forgot-password")
+async def forgot_password(email: str):
+    return await UserRepository.request_password_reset(email)
+
+@router.post("/reset-password")
+async def reset_password(token: str, new_password: str):
+    return await UserRepository.reset_password(token, new_password)
+
 
 # CREATE
 @router.post("/", response_model= UserResponse)

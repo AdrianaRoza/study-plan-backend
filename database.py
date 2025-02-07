@@ -26,11 +26,5 @@ class AsyncDatabaseSession:
 
 
 db = AsyncDatabaseSession()
-db.init()  # Certifica-te de que o init é chamado em algum lugar antes de usar db
+db.init()
 
-async def commit_rollback():
-    try:
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
